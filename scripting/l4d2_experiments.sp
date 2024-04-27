@@ -9,7 +9,9 @@
 #include <sourcemod>
 #include <sdkhooks>
 
-ConVar g_cvCustomSpeed;
+ConVar g_cvCustomSpeedNormal,
+    g_cvCustomSpeedLowHealth,
+    g_cvCustomSpeedOneHP;
 
 public Plugin myinfo = 
 {
@@ -21,7 +23,9 @@ public Plugin myinfo =
 }
 
 public void OnPluginStart() {
-    g_cvCustomSpeed = CreateConVar("l4d2_experiments_survivor_move_speed", "220.0", "Specify the player's base movement speed", FCVAR_NOTIFY);
+    g_cvCustomSpeedNormal = CreateConVar("l4d2_experiments_survivor_move_speed_normal", "220.0", "Specify the player's base movement speed", FCVAR_NOTIFY);
+    g_cvCustomSpeedLowHealth = CreateConVar("l4d2_experiments_survivor_move_speed_low_health", "150.0", "Specify the player's base movement speed", FCVAR_NOTIFY);
+    g_cvCustomSpeedOneHP = CreateConVar("l4d2_experiments_survivor_move_speed_one_hp", "85.0", "Specify the player's base movement speed", FCVAR_NOTIFY);
     
     for(int i = 1; i <= MaxClients; i++) {
         if(!IsClientConnected(i) || !IsClientInGame(i) || IsFakeClient(i))
@@ -60,6 +64,22 @@ public Action postThink(int client) {
     if(GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
         return Plugin_Continue;
 
-    SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", g_cvCustomSpeed.FloatValue);
+    int playerMaxHealth = GetEntProp(client, Prop_Send, "m_iMaxHealth");
+    int playerCurrentHealth = GetClientHealth(client);
+    float playerHPRatio = float(playerCurrentHealth) / float(playerMaxHealth);
+
+
+
+    if(playerHPRatio <= 0.01) {
+        SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", g_cvCustomSpeedOneHP.FloatValue);
+    }
+    else if(playerHPRatio < 0.4) {
+        SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", g_cvCustomSpeedLowHealth.FloatValue);
+    }
+    else {
+        SetEntPropFloat(client, Prop_Send, "m_flMaxspeed", g_cvCustomSpeedNormal.FloatValue);
+    }
+
+
     return Plugin_Continue;
 }
